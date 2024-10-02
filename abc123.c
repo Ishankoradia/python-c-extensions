@@ -1,4 +1,6 @@
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <Python.h>
+#include <numpy/arrayobject.h>
 #include <stdio.h>
 
 
@@ -9,8 +11,66 @@ PyObject *add(PyObject *self, PyObject *args) {
     return PyFloat_FromDouble(x + y);
 };
 
+static PyObject *sum(PyObject *self, PyObject *args) {
+    PyArrayObject *arr;
+    PyArg_ParseTuple(args, "O!", &PyArray_Type, &arr);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    if(!PyArray_Check(arr)) {
+        PyErr_SetString(PyExc_TypeError, "Argument must be a numeric numpy array");
+        return NULL;
+    }
+    // double *data = PyArray_DATA(arr);
+    int64_t size = PyArray_SIZE(arr);
+    double *data;
+    npy_intp dims[] = {[0] = size};
+    PyArray_AsCArray((PyObject **)&arr, &data, dims, 1, PyArray_DescrFromType(NPY_DOUBLE));
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    double total = 0;
+    for (int i=0; i<size; ++i) {
+        total += data[i];
+    }
+    return PyFloat_FromDouble(total);
+};
+
+
+static PyObject *double_arr(PyObject *self, PyObject *args) {
+    PyArrayObject *arr;
+    PyArg_ParseTuple(args, "O!", &PyArray_Type, &arr);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    if(!PyArray_Check(arr)) {
+        PyErr_SetString(PyExc_TypeError, "Argument must be a numeric numpy array");
+        return NULL;
+    }
+    // double *data = PyArray_DATA(arr);
+    int64_t size = PyArray_SIZE(arr);
+    double *data;
+    npy_intp dims[] = {[0] = size};
+    PyArray_AsCArray((PyObject **)&arr, &data, dims, 1, PyArray_DescrFromType(NPY_DOUBLE));
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    PyObject *result = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    double *result_data = PyArray_DATA((PyArrayObject *)result);
+    for (int i=0; i<size; ++i) {
+        result_data[i] = (2 * data[i]);   
+    }
+    return result;
+};
+
 static PyMethodDef methods[] = {
     { "add", add, METH_VARARGS, "Adds two numbers" },
+    { "sum", sum, METH_VARARGS, "Calculate sum of numpy array"},
+    { "double", double_arr, METH_VARARGS, "Double elements in numpy array"},
     { NULL, NULL, 0, NULL}
 };
 
@@ -28,8 +88,7 @@ static struct PyModuleDef abc123 = {
 
 PyMODINIT_FUNC PyInit_abc123() {
     printf("Hello, World!\n");  
-    return PyModule_Create(&abc123);
+    PyObject *module = PyModule_Create(&abc123);
+    import_array();
+    return module;
 }
-
-// '/Users/ishankoradia/.pyenv/versions/3.11.0/include/python3.11'
-// gcc -shared -o abc123.so abc123.c -I/Users/ishankoradia/.pyenv/versions/3.11.0/include/python3.11 -L/Users/ishankoradia/.pyenv/versions/3.11.0/lib -lpython3.11
