@@ -60,6 +60,9 @@ static PyObject *double_arr(PyObject *self, PyObject *args) {
     }
 
     PyObject *result = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    if (PyErr_Occurred()) { // it is possible that the memory is full and its not able to create an array
+        return NULL;
+    }
     double *result_data = PyArray_DATA((PyArrayObject *)result);
     for (int i=0; i<size; ++i) {
         result_data[i] = (2 * data[i]);   
